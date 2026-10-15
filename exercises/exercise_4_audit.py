@@ -111,7 +111,16 @@ async def node_analyze(state):
     llm = get_llm().with_structured_output(PRAnalysis)
     with console.status("[dim]LLM reviewing the diff...[/dim]"):
         a: PRAnalysis = await llm.ainvoke([
-            {"role": "system", "content": "Senior reviewer. Structured output."},
+            {"role": "system", "content": (
+                "Senior code reviewer. Provide structured output with realistic self-reported confidence. "
+                "Calibrate confidence strictly based on risk: "
+                "Low risk / trivial PRs: > 75%. "
+                "Medium risk (schema additions, small features): 60-72%. "
+                "High risk (security flaws, weak hashing like MD5, injection, missing tests): < 58%. "
+                "If your confidence is below 60% (confidence < 0.60), identify key risks or uncertainties "
+                "and populate escalation_questions with 2–4 specific, context-rich questions "
+                "referencing specific files and sections in the diff."
+            )},
             {"role": "user", "content": f"Title: {state['pr_title']}\nDiff:\n{state['pr_diff']}"},
         ])
     console.print(f"  [green]✓[/green] confidence={a.confidence:.0%}, {len(a.comments)} comment(s)")
